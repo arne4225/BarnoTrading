@@ -33,6 +33,9 @@
                     <x-nav-link :href="route('statistics.index')" :active="request()->routeIs('statistics.*')">
                         Statistieken
                     </x-nav-link>
+                    <x-nav-link :href="route('leaderboard.index')" :active="request()->routeIs('leaderboard.*')">
+                        Leaderboard
+                    </x-nav-link>
                     <x-nav-link :href="route('account.edit')" :active="request()->routeIs('account.*')">
                         Instellingen
                     </x-nav-link>
@@ -108,6 +111,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('statistics.index')" :active="request()->routeIs('statistics.*')">
                 Statistieken
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('leaderboard.index')" :active="request()->routeIs('leaderboard.*')">
+                Leaderboard
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('account.edit')" :active="request()->routeIs('account.*')">
                 Instellingen

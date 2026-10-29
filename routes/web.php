@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PriceAlertController;
 use App\Http\Controllers\ProfileController;
@@ -32,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/journal', [TradeController::class, 'index'])->name('journal.index');
     Route::get('/journal/export', [TradeController::class, 'export'])->name('journal.export');
     Route::patch('/journal/{trade}', [TradeController::class, 'update'])->name('journal.update');
+    Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
     Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics.index');
 
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
