@@ -9,6 +9,7 @@ use App\Exceptions\InvalidOrderException;
 use App\Models\Order;
 use App\Models\PortfolioSnapshot;
 use App\Models\Position;
+use App\Models\Trade;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\MarketData\MarketDataService;
@@ -110,6 +111,8 @@ class PortfolioService
 
         $this->assertTradeAllowed($current, $order->side, $order->is_short, $quantity);
 
+        $isOpeningLeg = ($order->side === OrderSide::Buy && $current >= 0) || ($order->side === OrderSide::Sell && $order->is_short);
+
         $position ??= new Position(['user_id' => $user->id, 'symbol' => $order->symbol, 'quantity' => 0, 'cost_basis_cents' => 0]);
 
         if ($order->side === OrderSide::Buy && $current < 0) {
@@ -141,9 +144,12 @@ class PortfolioService
             $position->save();
         }
 
+        $trade = $this->updateTrade($user, $order, $current, $position->quantity, $isOpeningLeg, $priceCents, $realized, $commissionCents);
+
         return Transaction::create([
             'user_id' => $user->id,
             'order_id' => $order->id,
+            'trade_id' => $trade->id,
             'symbol' => $order->symbol,
             'side' => $order->side,
             'is_short' => $order->is_short,
@@ -153,6 +159,43 @@ class PortfolioService
             'realized_pnl_cents' => $realized,
             'executed_at' => now(),
         ]);
+    }
+
+    /**
+     * Houdt de round-trip (Trade) bij: opent bij een positie van 0, sluit bij terugkeer naar 0.
+     */
+    private function updateTrade(User $user, Order $order, int $before, int $after, bool $isOpeningLeg, int $priceCents, int $realized, int $commissionCents): Trade
+    {
+        $trade = $before === 0
+            ? null
+            : $user->trades()->where('symbol', $order->symbol)->whereNull('closed_at')->latest('id')->first();
+
+        $trade ??= $user->trades()->create([
+            'symbol' => $order->symbol,
+            'direction' => $order->side === OrderSide::Buy ? 'long' : 'short',
+            'opened_at' => now(),
+        ]);
+
+        $gross = $order->quantity * $priceCents;
+        $trade->peak_quantity = max($trade->peak_quantity, abs($after));
+        $trade->commission_cents += $commissionCents;
+        $trade->realized_pnl_cents += $realized;
+
+        if ($isOpeningLeg) {
+            $trade->open_quantity += $order->quantity;
+            $trade->open_value_cents += $gross;
+        } else {
+            $trade->close_quantity += $order->quantity;
+            $trade->close_value_cents += $gross;
+        }
+
+        if ($after === 0) {
+            $trade->closed_at = now();
+        }
+
+        $trade->save();
+
+        return $trade;
     }
 
     public function summary(User $user): PortfolioSummary
@@ -243,6 +286,7 @@ class PortfolioService
             $user->orders()->delete();
             $user->positions()->delete();
             $user->transactions()->delete();
+            $user->trades()->delete();
             $user->portfolioSnapshots()->delete();
 
             $starting = $startingCashCents ?? $user->starting_cash_cents;

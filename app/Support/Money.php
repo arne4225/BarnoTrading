@@ -31,4 +31,12 @@ final class Money
 
         return $sign.'$'.number_format(abs($cents) / 100, 2);
     }
+
+    /**
+     * Platte decimale weergave voor exports, zonder duizendtallen of valutateken: "-12.34".
+     */
+    public static function decimal(int $cents): string
+    {
+        return ($cents < 0 ? '-' : '').intdiv(abs($cents), 100).'.'.str_pad((string) (abs($cents) % 100), 2, '0', STR_PAD_LEFT);
+    }
 }

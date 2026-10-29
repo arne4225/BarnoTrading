@@ -27,6 +27,12 @@
                     <x-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
                         Transacties
                     </x-nav-link>
+                    <x-nav-link :href="route('journal.index')" :active="request()->routeIs('journal.*')">
+                        Journal
+                    </x-nav-link>
+                    <x-nav-link :href="route('statistics.index')" :active="request()->routeIs('statistics.*')">
+                        Statistieken
+                    </x-nav-link>
                     <x-nav-link :href="route('account.edit')" :active="request()->routeIs('account.*')">
                         Instellingen
                     </x-nav-link>
@@ -96,6 +102,12 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
                 Transacties
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('journal.index')" :active="request()->routeIs('journal.*')">
+                Journal
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('statistics.index')" :active="request()->routeIs('statistics.*')">
+                Statistieken
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('account.edit')" :active="request()->routeIs('account.*')">
                 Instellingen

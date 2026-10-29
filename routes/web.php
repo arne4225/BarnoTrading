@@ -5,7 +5,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RiskController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WatchlistController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +27,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
+    Route::get('/journal', [TradeController::class, 'index'])->name('journal.index');
+    Route::get('/journal/export', [TradeController::class, 'export'])->name('journal.export');
+    Route::patch('/journal/{trade}', [TradeController::class, 'update'])->name('journal.update');
+    Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics.index');
 
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
 

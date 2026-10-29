@@ -77,6 +77,11 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
+    public function trades(): HasMany
+    {
+        return $this->hasMany(Trade::class);
+    }
+
     public function watchlistItems(): HasMany
     {
         return $this->hasMany(WatchlistItem::class);
