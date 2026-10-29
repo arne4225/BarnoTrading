@@ -24,6 +24,7 @@
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="MARKET_DATA_DRIVER" value="fake"/>
+        <env name="TRADING_IGNORE_MARKET_HOURS" value="true"/>
         <env name="ALPACA_KEY_ID" value=""/>
         <env name="ALPACA_SECRET_KEY" value=""/>
         <env name="DB_CONNECTION" value="sqlite"/>
