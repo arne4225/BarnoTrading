@@ -14,14 +14,6 @@ class PortfolioSnapshot extends Model
     /** @use HasFactory<PortfolioSnapshotFactory> */
     use HasFactory;
 
-    /**
-     * @return array<string, mixed>
-     */
-    protected function casts(): array
-    {
-        return ['date' => 'date'];
-    }
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
