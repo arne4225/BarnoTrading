@@ -43,13 +43,44 @@
                         <div class="text-sm text-amber-400 mt-1">Geen koers beschikbaar voor {{ $symbol }}.</div>
                     @endif
 
-                    <div class="flex gap-2 mt-4 text-xs">
-                        @foreach (\App\Enums\Timeframe::cases() as $tf)
-                            <a href="{{ route('stocks.show', [$symbol, 'tf' => $tf->value]) }}"
-                               class="px-2 py-1 rounded {{ $tf === $timeframe ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200' }}">{{ $tf->label() }}</a>
-                        @endforeach
+                    <div class="mt-4"
+                         x-data="stockChart({
+                            url: @js(route('stocks.chart', $symbol)),
+                            timeframe: @js($timeframe->value),
+                            timeframes: @js(collect(\App\Enums\Timeframe::cases())->map(fn ($tf) => ['value' => $tf->value, 'label' => $tf->label()])),
+                            isShort: @js((bool) $position?->isShort()),
+                         })">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <template x-for="tf in timeframes" :key="tf.value">
+                                <button type="button" @click="setTimeframe(tf.value)" x-text="tf.label"
+                                        :class="timeframe === tf.value ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'"
+                                        class="px-2 py-1 rounded"></button>
+                            </template>
+                            <span class="ms-auto flex gap-2">
+                                <button type="button" @click="levels.stop_loss === null ? addLevel('stop_loss') : removeLevel('stop_loss')"
+                                        :class="levels.stop_loss !== null ? 'bg-red-900/60 text-red-200' : 'bg-slate-800 text-slate-400'" class="px-2 py-1 rounded">Stop-loss lijn</button>
+                                <button type="button" @click="levels.take_profit === null ? addLevel('take_profit') : removeLevel('take_profit')"
+                                        :class="levels.take_profit !== null ? 'bg-emerald-900/60 text-emerald-200' : 'bg-slate-800 text-slate-400'" class="px-2 py-1 rounded">Take-profit lijn</button>
+                            </span>
+                        </div>
+
+                        <div class="flex flex-wrap gap-x-5 gap-y-2 mt-3 text-xs text-slate-300">
+                            <label class="flex items-center gap-1"><input type="checkbox" x-model="indicators.volume.on" @change="toggle()" class="rounded border-slate-700 bg-slate-800 text-emerald-600"> Volume</label>
+                            <label class="flex items-center gap-1"><input type="checkbox" x-model="indicators.vwap.on" @change="toggle()" class="rounded border-slate-700 bg-slate-800 text-emerald-600"> VWAP</label>
+                            <label class="flex items-center gap-1"><input type="checkbox" x-model="indicators.sma.on" @change="toggle()" class="rounded border-slate-700 bg-slate-800 text-emerald-600"> SMA
+                                <input type="text" x-model="indicators.sma.periods" @change="toggle()" class="w-20 px-1 py-0 text-xs rounded border-slate-700 bg-slate-800"></label>
+                            <label class="flex items-center gap-1"><input type="checkbox" x-model="indicators.ema.on" @change="toggle()" class="rounded border-slate-700 bg-slate-800 text-emerald-600"> EMA
+                                <input type="text" x-model="indicators.ema.periods" @change="toggle()" class="w-20 px-1 py-0 text-xs rounded border-slate-700 bg-slate-800"></label>
+                            <label class="flex items-center gap-1"><input type="checkbox" x-model="indicators.rsi.on" @change="toggle()" class="rounded border-slate-700 bg-slate-800 text-emerald-600"> RSI
+                                <input type="number" min="2" max="200" x-model.number="indicators.rsi.period" @change="toggle()" class="w-14 px-1 py-0 text-xs rounded border-slate-700 bg-slate-800"></label>
+                            <label class="flex items-center gap-1"><input type="checkbox" x-model="indicators.macd.on" @change="toggle()" class="rounded border-slate-700 bg-slate-800 text-emerald-600"> MACD
+                                <input type="text" x-model="indicators.macd.params" @change="toggle()" class="w-20 px-1 py-0 text-xs rounded border-slate-700 bg-slate-800"></label>
+                        </div>
+
+                        <p x-show="error" x-text="error" x-cloak class="mt-2 text-xs text-amber-400"></p>
+                        <div x-ref="chart" class="mt-3 w-full"></div>
+                        <p class="text-xs text-slate-500 mt-1">Tijden in Eastern Time. Sleep de SL/TP-lijnen op de grafiek; de niveaus worden in het orderformulier ingevuld.</p>
                     </div>
-                    <div class="mt-3"><x-price-chart :candles="$candles" /></div>
                 </x-card>
 
                 @if ($position)
@@ -71,7 +102,10 @@
             </div>
 
             <x-card title="Order plaatsen">
-                <div x-data="{
+                <div @chart-levels.window="stopLoss = $event.detail.stop_loss ?? ''; takeProfit = $event.detail.take_profit ?? ''; bracket = bracket || stopLoss !== '' || takeProfit !== ''"
+                     x-data="{
+                    stopLoss: @js(old('stop_loss', '')),
+                    takeProfit: @js(old('take_profit', '')),
                     action: @js(old('is_short') ? 'short' : old('side', 'buy')),
                     type: @js(old('type', 'market')),
                     quantity: @js((int) old('quantity', 1)),
@@ -132,11 +166,11 @@
                         <div x-show="bracket" x-cloak class="mt-2 grid grid-cols-2 gap-2">
                             <div>
                                 <x-input-label for="take_profit" value="Take-profit ($)" />
-                                <x-text-input id="take_profit" name="take_profit" inputmode="decimal" :value="old('take_profit')" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
+                                <x-text-input id="take_profit" name="take_profit" inputmode="decimal" x-model="takeProfit" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
                             </div>
                             <div>
                                 <x-input-label for="stop_loss" value="Stop-loss ($)" />
-                                <x-text-input id="stop_loss" name="stop_loss" inputmode="decimal" :value="old('stop_loss')" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
+                                <x-text-input id="stop_loss" name="stop_loss" inputmode="decimal" x-model="stopLoss" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
                             </div>
                         </div>
                     </div>

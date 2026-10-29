@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/stocks', [StockController::class, 'index'])->name('stocks.index');
     Route::get('/stocks/{symbol}', [StockController::class, 'show'])->name('stocks.show');
+    Route::get('/stocks/{symbol}/chart', [StockController::class, 'chart'])->name('stocks.chart');
     Route::get('/stocks/{symbol}/quote', [StockController::class, 'quote'])->name('stocks.quote');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');

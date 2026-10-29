@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Timeframe;
+use App\Http\Requests\ChartDataRequest;
+use App\Services\ChartDataService;
 use App\Services\MarketData\MarketDataService;
 use App\Services\PortfolioService;
 use App\Support\Money;
@@ -40,13 +42,20 @@ class StockController extends Controller
             'symbol' => $symbol,
             'name' => config("trading.symbols.{$symbol}"),
             'quote' => $quotes[$symbol] ?? null,
-            'candles' => $marketData->candles($symbol, $timeframe, 78),
             'timeframe' => $timeframe,
             'position' => $portfolio->positionFor($user, $symbol),
             'buyingPowerCents' => $portfolio->buyingPowerCents($user),
             'watchlistItem' => $user->watchlistItems()->where('symbol', $symbol)->first(),
             'openOrders' => $user->orders()->where('symbol', $symbol)->whereIn('status', ['pending', 'held'])->latest('id')->get(),
         ]);
+    }
+
+    public function chart(ChartDataRequest $request, string $symbol, ChartDataService $charts): JsonResponse
+    {
+        $symbol = MarketDataService::normalizeSymbol($symbol);
+        abort_unless(MarketDataService::isValidSymbol($symbol), 404);
+
+        return response()->json($charts->build($symbol, $request->timeframe(), $request->indicatorConfig()));
     }
 
     public function quote(string $symbol, MarketDataService $marketData): JsonResponse

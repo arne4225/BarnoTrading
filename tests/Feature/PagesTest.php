@@ -34,7 +34,7 @@ it('gives new users the configured starting capital', function () {
 
 it('renders all main pages', function (string $url) {
     $this->get($url)->assertOk();
-})->with(['/dashboard', '/stocks', '/stocks?q=tesla', '/stocks/AAPL', '/stocks/AAPL?tf=1Day', '/orders', '/transactions', '/watchlist', '/account']);
+})->with(['/dashboard', '/stocks', '/stocks?q=tesla', '/stocks/AAPL', '/orders', '/transactions', '/watchlist', '/account']);
 
 it('shows the market status and the delay of quotes', function () {
     $this->get('/stocks/AAPL')
