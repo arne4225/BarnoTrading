@@ -59,11 +59,30 @@ Gebaseerd op de Alpaca-documentatie op het moment van bouwen; controleer actuele
 - **Historische candles**: 1min, 5min, 15min, 1uur en 1dag via de bars-endpoint met IEX-feed.
 - De marktklok en feestdagen komen uit een lokale kalender (zie `config/trading.php`, jaarlijks bijwerken) in plaats van de Alpaca Trading API.
 
+## Fase 2: functies
+
+- **Grafiek** (aandeelpagina): candlesticks met TradingView Lightweight Charts, timeframes 1m/5m/15m/1u/1d, ververst elke 15 s. Indicatoren (SMA, EMA, VWAP, volume, RSI, MACD) aan/uit met eigen periodes, bv. SMA `20,50`. Ze worden door `IndicatorService` in PHP berekend en als JSON geleverd (`/stocks/{symbol}/chart`).
+- **Stop-loss / take-profit op de grafiek**: knoppen "Stop-loss lijn" / "Take-profit lijn" zetten sleepbare lijnen; de niveaus worden live in het orderformulier ingevuld.
+- **Risicotools**: position size calculator ("Vul aantal in" op basis van risico-% en stop-loss), waarschuwingen (geen stop-loss, positie te groot, risk/reward te laag) en een optionele dagelijkse verlieslimiet. Alles is per gebruiker instelbaar onder **Instellingen**.
+- **Journal** (`/journal`): reden van instap, notitie, tags en zelfbeoordeling per trade (een trade = positie openen tot ze weer op 0 staat). **CSV-export** via `/journal/export`.
+- **Statistieken** (`/statistics`): win rate, gemiddelde winst/verlies, profit factor, expectancy, max drawdown, beste/slechtste trade, resultaat per tag, weekdag en uur, equity curve en drawdown.
+- **Watchlists**: meerdere lijsten, sorteren op symbool/koers/dag-%, sparklines (30 dagen) en prijsalerts. Alerts worden bij elke paginaweergave en door `trading:engine` gecontroleerd; een melding verschijnt bovenaan de pagina.
+- **Leaderboard** (`/leaderboard`): rendement per dag/week/maand/totaal. Alleen gebruikers die dat aanzetten staan erop, en alleen naam en percentage worden getoond.
+
+### Beperkingen van de grafiek per provider
+
+- **Alpaca gratis (IEX)**: candles komen alleen uit IEX-handel. Bij weinig verhandelde aandelen ontbreken daardoor minutenbars of is het volume veel lager dan de echte markt. Alle vijf timeframes worden ondersteund; er worden maximaal 300 candles per aanvraag opgehaald (voor 1m is dat dus iets minder dan één handelsdag).
+- Elke grafiekverversing is één bars-call (candles worden 60 s gecachet) en past binnen de limiet van ~200 calls/min.
+- **Fake provider**: candles zijn synthetisch (deterministisch per symbool), bedoeld om de app te testen.
+- Tijden op de grafiek zijn Eastern Time. Daguitwisseling van VWAP gebeurt op ET-dagen.
+- Sparklines en dag-% in de watchlist gebruiken dagbars (30 stuks, 5 min gecachet): één extra call per symbool per 5 minuten.
+
 ## Architectuur in het kort
 
 - `app/Contracts/MarketDataProvider` — interface; implementaties: `FakeMarketDataProvider`, `AlpacaMarketDataProvider`. `MarketDataService` voegt foutafhandeling en "laatst bekende koers" toe.
 - `app/Services/OrderService` — plaatsen, annuleren, uitvoeren, bracket/OCO, trailing stops.
 - `app/Services/PortfolioService` — cash, posities, P&L, margin, reset.
+- `IndicatorService`, `ChartDataService`, `PositionSizingService`, `RiskService`, `StatisticsService`, `TradeExportService`, `WatchlistService`, `AlertService`, `LeaderboardService` — fase 2, allemaal in `app/Services`.
 - Controllers zijn dun; validatie in Form Requests, autorisatie in Policies, enums voor type/zijde/status.
 - Alle geldbedragen zijn gehele centen.
 
@@ -72,5 +91,7 @@ Gebaseerd op de Alpaca-documentatie op het moment van bouwen; controleer actuele
 ```bash
 php artisan test --compact
 ```
+
+Frontend: `pnpm run build` (of `pnpm run dev`) bouwt Tailwind, Alpine en Lightweight Charts.
 
 Tests draaien tegen de `FakeMarketDataProvider` met vaste koersen; er gaan geen echte API-calls uit.

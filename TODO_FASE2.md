@@ -1,25 +1,23 @@
-# TODO fase 2
+# Nog open na fase 2
 
-## Analyse en grafieken
-- Candlestick-grafiek met volume, zoom en indicatoren (SMA/EMA, RSI, MACD, VWAP). De `MarketDataProvider::candles()` en `Candle`-DTO zijn hier al op voorbereid.
-- Equity curve en drawdown op basis van `portfolio_snapshots` (nu 1 per dag; intraday-snapshots toevoegen).
-- Performance-statistieken: winrate, gemiddelde winst/verlies, expectancy, Sharpe, per symbool en per dag/uur.
-- Trade-journal: notities en tags per order/transactie, screenshots.
+Alles uit de fase 2-opdracht is gebouwd. Dit staat nog open of is bewust beperkt:
 
-## Handelen
-- Time-in-force (day/GTC/IOC), gedeeltelijke fills en orderboek-simulatie met bid/ask in plaats van last price.
-- Pre-/after-market sessies, vervroegde sluitingen en automatisch bijgewerkte feestdagenkalender (nu handmatig in config).
-- Margin-calls en geforceerd liquideren, short-rente en leenkosten, dividenden en splits.
-- Fractionele aandelen en reservering van cash voor pending orders.
-- OCO/OTO los van bracket, order wijzigen in plaats van annuleren en opnieuw plaatsen.
+## Niet in een echte browser geverifieerd
+- De Alpine/JS-onderdelen zijn niet in een browser doorgeklikt (alleen backend, JSON en HTML-uitvoer zijn getest): candlestick-grafiek, indicator-toggles, het slepen van SL/TP-lijnen, het invullen van het orderformulier en de equity-grafiek. Doe hier een handmatige rondgang over, vooral het slepen.
+- Geen browser-/end-to-end tests (bv. Pest browser tests of Dusk).
 
-## Marktdata en realtime
-- WebSocket-stream (Alpaca) of server-sent events in plaats van polling; engine event-driven maken.
-- Zoekfunctie op volledige assetlijst (eenmalig importeren) i.p.v. de korte lijst in config.
-- Alerts op koersniveaus.
+## Functioneel
+- Equity curve heeft 1 punt per dag; intraday-snapshots zouden drawdown en leaderboard nauwkeuriger maken.
+- Leaderboard rekent equity live uit per zichtbare gebruiker; bij veel gebruikers is een geplande berekening in `trading:snapshot` beter.
+- Dagelijkse verlieslimiet blokkeert alleen nieuwe orders; al pending orders blijven staan en kunnen nog vullen.
+- Waarschuwing bij positiegrootte kijkt naar order + bestaande positie op de ingevulde instapprijs, niet naar andere posities (geen portfoliobrede blootstelling).
+- Journal koppelt niet aan bracket-orders of screenshots; tags zijn vrije tekst.
+- Sparklines zijn dagbars (30 dagen), geen intraday. Alerts kennen alleen "koers raakt niveau" (geen % of indicator).
+- Zoeken op volledige assetlijst i.p.v. de korte lijst in `config/trading.php`.
 
-## Techniek
-- Engine als queue worker/Horizon-job of supervisor-service; per-symbool locking bij meerdere engine-processen.
-- Browser-/end-to-end tests voor het orderformulier (Alpine).
-- Per-gebruiker commissie- en slippage-instellingen in de database.
-- Exports (CSV) van orders en transacties.
+## Uit fase 1 nog niet gedaan
+- Time-in-force (day/IOC), gedeeltelijke fills, bid/ask-simulatie, pre-/after-market.
+- Margin calls, shortrente, dividenden, splits, fractionele aandelen, cash-reservering voor pending orders.
+- WebSocket/SSE in plaats van pollen; engine als queue worker/supervisor met locking bij meerdere processen.
+- Vervroegde sluitingen (13:00) en automatisch bijgewerkte feestdagen.
+- Per-symbool/portfolio-brede risico-limieten.

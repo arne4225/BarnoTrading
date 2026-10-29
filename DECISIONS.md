@@ -35,3 +35,30 @@
 - Breeze (Blade) installeerde Tailwind 3; we blijven daarbij. Donker thema via `darkMode: 'class'` met `class="dark"` op `<html>` en aangepaste Breeze-componenten.
 - Frontendbuild via pnpm omdat `npm` niet op deze machine staat.
 - Lokalisatie: UI-teksten zijn in het Nederlands, code en identifiers in het Engels.
+
+# Fase 2
+
+## Grafieken en indicatoren
+- Indicatoren rekenen op floats in dollars (het zijn weergave-reeksen, geen boekhouding); candles komen binnen als centen. Geld blijft overal elders integer.
+- EMA start met de SMA van de eerste N waarden, RSI gebruikt Wilder-smoothing; beide zijn getest tegen de StockCharts-referentiewaarden. VWAP begint elke ET-handelsdag opnieuw en gebruikt de typical price (H+L+C)/3.
+- Lightweight Charts kent alleen UTC; tijden worden server-side met de Eastern Time-offset verschoven. RSI en MACD staan in eigen panes (Lightweight Charts v5), volume als overlay.
+- Slepen van SL/TP-lijnen is zelf gebouwd (hit-test op de lijn, `coordinateToPrice`) omdat de library dat niet biedt. De niveaus vullen het orderformulier via een browser-event.
+- Grafiekdata wordt 5 s gecachet; bij een providerfout wordt niets gecachet.
+
+## Risico
+- Position size = floor(equity × risico-bps / risico per aandeel). Afronden naar beneden zodat het risico nooit overschreden wordt; bij long ook begrensd door de koopkracht.
+- Waarschuwingen blokkeren nooit; ze verschijnen live in het formulier en na het plaatsen. Orders die een positie verkleinen krijgen geen waarschuwingen.
+- Dagelijkse verlieslimiet: dagverlies t.o.v. de laatste slotstand (of startkapitaal). Zodra de limiet geraakt is wordt dat vastgelegd (`trading_blocked_on`) en blijft de blokkade de rest van die ET-dag staan, ook als de koers herstelt. Alleen positie-vergrotende orders worden geblokkeerd; sluiten blijft altijd mogelijk. Orders die al pending staan worden door de limiet niet geraakt.
+- Instellingen zijn opgeslagen in eenheden zonder floats: commissie in centen, slippage/risico/verlieslimiet in basispunten, min. risk/reward in honderdsten. Lege commissie/slippage betekent: standaard uit `.env`. Startkapitaal wijzig je alleen via reset (anders klopt de P&L-historie niet).
+
+## Journal en statistieken
+- Een "trade" is een round-trip (positie 0 → niet-0 → 0), bijgehouden in `PortfolioService::applyFill` in de tabel `trades`. Transacties verwijzen ernaar. Gerealiseerd resultaat is netto na commissie.
+- Statistieken tellen alleen gesloten trades. Per tag telt een trade met meerdere tags in elke tag mee. Weekdag/uur gaan op het openingsmoment (ET). Resultaten worden 60 s gecachet met een sleutel die verandert zodra er een trade of snapshot bijkomt.
+- Equity curve en max drawdown komen uit de dagelijkse snapshots, dus 1 punt per dag; dat is grof maar consistent met de dagelijkse P&L.
+- CSV: UTF-8 met BOM voor Excel, bedragen als platte decimalen, en tekstvelden die met `=`, `+`, `-` of `@` beginnen krijgen een `'` ervoor tegen formule-injectie.
+
+## Watchlist, alerts, leaderboard
+- Watchlist-items houden `user_id` én `watchlist_id` (autorisatie blijft eenvoudig). Bestaande items zijn gemigreerd naar een lijst "Standaard".
+- Alerts hebben een richting die bij aanmaken uit de huidige koers volgt; ze gaan één keer af en blijven zichtbaar tot de gebruiker ze wegklikt. Controle gebeurt bij paginaweergave én in `trading:engine`, zodat het ook zonder engine werkt.
+- Leaderboard toont alleen naam, rendement in % en aantal gesloten trades (geen bedragen of e-mail), alleen voor gebruikers die zich aanmelden. Rendement = (equity nu − equity voor de periode) / equity voor de periode, 60 s gecachet. Equity nu wordt met actuele koersen berekend, dus het kost per zichtbare gebruiker een koers-call per 60 s.
+- `Model::preventLazyLoading` staat aan buiten productie om N+1's direct te zien.

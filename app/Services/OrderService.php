@@ -112,7 +112,7 @@ class OrderService
             if ($quote === null || $quote->isStale) {
                 continue;
             }
-            if ($this->evaluate($order->fresh(), $quote)) {
+            if ($this->evaluate($order->fresh('user'), $quote)) {
                 $filled++;
             }
         }

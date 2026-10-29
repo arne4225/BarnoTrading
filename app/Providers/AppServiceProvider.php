@@ -7,6 +7,7 @@ use App\Services\MarketData\AlpacaMarketDataProvider;
 use App\Services\MarketData\FakeMarketDataProvider;
 use App\Services\MarketData\MarketCalendar;
 use App\Services\MarketData\MarketDataService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Maakt N+1-queries direct zichtbaar tijdens ontwikkeling en in tests.
+        Model::preventLazyLoading(! $this->app->isProduction());
     }
 }
