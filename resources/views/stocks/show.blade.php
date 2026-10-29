@@ -102,8 +102,43 @@
             </div>
 
             <x-card title="Order plaatsen">
-                <div @chart-levels.window="stopLoss = $event.detail.stop_loss ?? ''; takeProfit = $event.detail.take_profit ?? ''; bracket = bracket || stopLoss !== '' || takeProfit !== ''"
+                <div @chart-levels.window="stopLoss = $event.detail.stop_loss ?? ''; takeProfit = $event.detail.take_profit ?? ''; bracket = bracket || stopLoss !== '' || takeProfit !== ''; schedulePreview()"
                      x-data="{
+                    limitPrice: @js(old('limit_price', '')),
+                    stopPrice: @js(old('stop_price', '')),
+                    riskPercent: @js(number_format(auth()->user()->risk_per_trade_bps / 100, 2, '.', '')),
+                    sizing: null,
+                    warnings: [],
+                    riskError: null,
+                    previewTimer: null,
+                    schedulePreview() {
+                        clearTimeout(this.previewTimer);
+                        this.previewTimer = setTimeout(() => this.preview(false), 400);
+                    },
+                    async preview(fillQuantity) {
+                        const params = new URLSearchParams({
+                            symbol: @js($symbol),
+                            side: this.action === 'buy' ? 'buy' : 'sell',
+                            is_short: this.action === 'short' ? 1 : 0,
+                            risk_percent: this.riskPercent,
+                        });
+                        const entry = this.type === 'limit' || this.type === 'stop_limit' ? this.limitPrice : (this.type === 'stop' ? this.stopPrice : '');
+                        if (entry) params.set('entry', entry);
+                        if (this.stopLoss) params.set('stop_loss', this.stopLoss);
+                        if (this.takeProfit) params.set('take_profit', this.takeProfit);
+                        if (this.quantity > 0 && !fillQuantity) params.set('quantity', this.quantity);
+                        try {
+                            const r = await fetch(@js(route('risk.preview')) + '?' + params, { headers: { Accept: 'application/json' } });
+                            const d = await r.json();
+                            this.riskError = d.error ?? null;
+                            this.sizing = d.sizing ?? null;
+                            this.warnings = d.warnings ?? [];
+                            if (fillQuantity && d.sizing && d.sizing.shares > 0) {
+                                this.quantity = d.sizing.shares;
+                                this.schedulePreview();
+                            }
+                        } catch (e) {}
+                    },
                     stopLoss: @js(old('stop_loss', '')),
                     takeProfit: @js(old('take_profit', '')),
                     action: @js(old('is_short') ? 'short' : old('side', 'buy')),
@@ -139,16 +174,16 @@
 
                     <div>
                         <x-input-label for="quantity" value="Aantal" />
-                        <x-text-input id="quantity" name="quantity" type="number" min="1" step="1" x-model.number="quantity" class="mt-1 block w-full" required />
+                        <x-text-input id="quantity" name="quantity" type="number" min="1" step="1" x-model.number="quantity" @input="schedulePreview()" class="mt-1 block w-full" required />
                     </div>
 
                     <div x-show="type === 'limit' || type === 'stop_limit'" x-cloak>
                         <x-input-label for="limit_price" value="Limietprijs ($)" />
-                        <x-text-input id="limit_price" name="limit_price" inputmode="decimal" :value="old('limit_price')" class="mt-1 block w-full" ::disabled="! (type === 'limit' || type === 'stop_limit')" />
+                        <x-text-input id="limit_price" name="limit_price" inputmode="decimal" x-model="limitPrice" class="mt-1 block w-full" ::disabled="! (type === 'limit' || type === 'stop_limit')" />
                     </div>
                     <div x-show="type === 'stop' || type === 'stop_limit'" x-cloak>
                         <x-input-label for="stop_price" value="Stopprijs ($)" />
-                        <x-text-input id="stop_price" name="stop_price" inputmode="decimal" :value="old('stop_price')" class="mt-1 block w-full" ::disabled="! (type === 'stop' || type === 'stop_limit')" />
+                        <x-text-input id="stop_price" name="stop_price" inputmode="decimal" x-model="stopPrice" class="mt-1 block w-full" ::disabled="! (type === 'stop' || type === 'stop_limit')" />
                     </div>
                     <div x-show="type === 'trailing_stop'" x-cloak class="space-y-2">
                         <div class="flex gap-4 text-sm text-slate-300">
@@ -166,13 +201,36 @@
                         <div x-show="bracket" x-cloak class="mt-2 grid grid-cols-2 gap-2">
                             <div>
                                 <x-input-label for="take_profit" value="Take-profit ($)" />
-                                <x-text-input id="take_profit" name="take_profit" inputmode="decimal" x-model="takeProfit" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
+                                <x-text-input id="take_profit" name="take_profit" inputmode="decimal" x-model="takeProfit" @input="schedulePreview()" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
                             </div>
                             <div>
                                 <x-input-label for="stop_loss" value="Stop-loss ($)" />
-                                <x-text-input id="stop_loss" name="stop_loss" inputmode="decimal" x-model="stopLoss" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
+                                <x-text-input id="stop_loss" name="stop_loss" inputmode="decimal" x-model="stopLoss" @input="schedulePreview()" class="mt-1 block w-full" ::disabled="! bracket || type === 'trailing_stop'" />
                             </div>
                         </div>
+                    </div>
+
+                    <div class="rounded-md border border-slate-800 p-3 space-y-2" x-show="type !== 'trailing_stop'" x-cloak>
+                        <div class="text-xs font-semibold uppercase text-slate-400">Risico &amp; positiegrootte</div>
+                        <div class="flex items-end gap-2">
+                            <div class="flex-1">
+                                <x-input-label for="risk_percent" value="Risico (% van account)" />
+                                <x-text-input id="risk_percent" inputmode="decimal" x-model="riskPercent" @input="schedulePreview()" class="mt-1 block w-full" />
+                            </div>
+                            <button type="button" @click="preview(true)" :disabled="!stopLoss" class="rounded bg-slate-700 px-3 py-2 text-xs text-slate-100 hover:bg-slate-600 disabled:opacity-40">Vul aantal in</button>
+                        </div>
+                        <p class="text-xs text-slate-500" x-show="!stopLoss">Vul een stop-loss in (of sleep de lijn op de grafiek) om het aantal te berekenen.</p>
+                        <p class="text-xs text-red-400" x-show="riskError" x-text="riskError"></p>
+                        <dl class="text-xs text-slate-300 grid grid-cols-2 gap-x-3 gap-y-1" x-show="sizing" x-cloak>
+                            <dt class="text-slate-500">Aantal</dt><dd class="tabular-nums" x-text="sizing?.shares + (sizing?.capped_by_buying_power ? ' (max koopkracht)' : '')"></dd>
+                            <dt class="text-slate-500">Bedrag</dt><dd class="tabular-nums" x-text="'$' + sizing?.position_value.toLocaleString('en-US', {minimumFractionDigits: 2})"></dd>
+                            <dt class="text-slate-500">Max. verlies</dt><dd class="tabular-nums text-red-400" x-text="'-$' + sizing?.max_loss.toLocaleString('en-US', {minimumFractionDigits: 2})"></dd>
+                            <dt class="text-slate-500">Potentiële winst</dt><dd class="tabular-nums text-emerald-400" x-text="sizing?.potential_profit === null ? '—' : '+$' + sizing?.potential_profit.toLocaleString('en-US', {minimumFractionDigits: 2})"></dd>
+                            <dt class="text-slate-500">Risk/reward</dt><dd class="tabular-nums" x-text="sizing?.risk_reward === null ? '—' : '1:' + sizing?.risk_reward"></dd>
+                        </dl>
+                        <ul class="text-xs text-amber-300 space-y-1" x-show="warnings.length" x-cloak>
+                            <template x-for="warning in warnings" :key="warning"><li x-text="'⚠ ' + warning"></li></template>
+                        </ul>
                     </div>
 
                     <div class="text-xs text-slate-500 space-y-1">

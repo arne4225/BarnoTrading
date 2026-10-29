@@ -24,6 +24,7 @@ class OrderService
     public function __construct(
         private readonly MarketDataService $marketData,
         private readonly PortfolioService $portfolio,
+        private readonly RiskService $risk,
     ) {}
 
     /**
@@ -33,6 +34,7 @@ class OrderService
     {
         $symbol = MarketDataService::normalizeSymbol($data->symbol);
         $this->validateShape($data, $symbol);
+        $this->risk->assertWithinDailyLossLimit($user, $data);
 
         try {
             $quote = $this->marketData->quote($symbol);

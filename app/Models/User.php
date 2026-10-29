@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password', 'starting_cash_cents', 'cash_cents',
     'commission_cents', 'slippage_bps', 'risk_per_trade_bps', 'max_position_percent',
-    'min_risk_reward_hundredths', 'warn_without_stop_loss', 'daily_loss_limit_bps', 'leaderboard_visible',
+    'min_risk_reward_hundredths', 'warn_without_stop_loss', 'daily_loss_limit_bps', 'leaderboard_visible', 'trading_blocked_on',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -35,6 +35,19 @@ class User extends Authenticatable
             'leaderboard_visible' => 'boolean',
         ];
     }
+
+    /**
+     * Spiegelt de databasedefaults, zodat nieuw aangemaakte modellen direct kloppen.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'risk_per_trade_bps' => 100,
+        'max_position_percent' => 25,
+        'min_risk_reward_hundredths' => 100,
+        'warn_without_stop_loss' => true,
+        'leaderboard_visible' => false,
+    ];
 
     /**
      * Persoonlijke commissie, anders de standaard uit config.

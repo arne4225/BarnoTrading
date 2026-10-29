@@ -8,6 +8,7 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Services\MarketData\MarketDataService;
 use App\Services\OrderService;
+use App\Services\RiskService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -27,10 +28,12 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(StoreOrderRequest $request, OrderService $orders, MarketDataService $marketData): RedirectResponse
+    public function store(StoreOrderRequest $request, OrderService $orders, RiskService $risk, MarketDataService $marketData): RedirectResponse
     {
         try {
-            $order = $orders->place($request->user(), $request->toData());
+            $data = $request->toData();
+            $warnings = $risk->assess($request->user(), $data);
+            $order = $orders->place($request->user(), $data);
         } catch (InvalidOrderException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -43,7 +46,9 @@ class OrderController extends Controller
                 : 'Beurs is gesloten: de order blijft open tot de opening.',
         };
 
-        return back()->with($order->status === OrderStatus::Rejected ? 'error' : 'status', $message);
+        return back()
+            ->with($order->status === OrderStatus::Rejected ? 'error' : 'status', $message)
+            ->with('warnings', $warnings);
     }
 
     public function destroy(Order $order, OrderService $orders): RedirectResponse

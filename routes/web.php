@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WatchlistController;
@@ -18,6 +19,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/stocks/{symbol}', [StockController::class, 'show'])->name('stocks.show');
     Route::get('/stocks/{symbol}/chart', [StockController::class, 'chart'])->name('stocks.chart');
     Route::get('/stocks/{symbol}/quote', [StockController::class, 'quote'])->name('stocks.quote');
+
+    Route::get('/risk/preview', [RiskController::class, 'preview'])->name('risk.preview');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');

@@ -37,6 +37,9 @@
                     @if (session('error'))
                         <div class="rounded-md bg-red-900/40 border border-red-700 text-red-200 px-4 py-2 text-sm">{{ session('error') }}</div>
                     @endif
+                    @foreach ((array) session('warnings', []) as $warning)
+                        <div class="rounded-md bg-amber-900/40 border border-amber-700 text-amber-200 px-4 py-2 text-sm">⚠ {{ $warning }}</div>
+                    @endforeach
                     @if ($errors->any() && ! request()->routeIs('profile.*', 'password.*'))
                         <div class="rounded-md bg-red-900/40 border border-red-700 text-red-200 px-4 py-2 text-sm">{{ $errors->first() }}</div>
                     @endif
