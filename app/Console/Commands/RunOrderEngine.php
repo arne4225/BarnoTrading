@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AlertService;
 use App\Services\OrderService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -11,15 +12,16 @@ use Illuminate\Console\Command;
 #[Description('Controleert open orders tegen de actuele koersen en voert ze uit')]
 class RunOrderEngine extends Command
 {
-    public function handle(OrderService $orders): int
+    public function handle(OrderService $orders, AlertService $alerts): int
     {
         $interval = max(1, (int) ($this->option('interval') ?: config('trading.engine_interval_seconds')));
 
         do {
             $filled = $orders->processOpenOrders();
+            $triggered = $alerts->check();
 
-            if ($filled > 0 || $this->option('once')) {
-                $this->line(now()->toTimeString()." — {$filled} order(s) uitgevoerd");
+            if ($filled > 0 || $triggered > 0 || $this->option('once')) {
+                $this->line(now()->toTimeString()." — {$filled} order(s) uitgevoerd, {$triggered} alert(s) afgegaan");
             }
 
             if ($this->option('once')) {

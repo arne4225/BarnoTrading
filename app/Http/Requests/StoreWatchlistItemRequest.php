@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Services\MarketData\MarketDataService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreWatchlistItemRequest extends FormRequest
 {
@@ -24,6 +25,7 @@ class StoreWatchlistItemRequest extends FormRequest
     {
         return [
             'symbol' => ['required', 'regex:/^[A-Z]{1,5}(\.[A-Z])?$/'],
+            'watchlist_id' => ['nullable', Rule::exists('watchlists', 'id')->where('user_id', $this->user()->id)],
         ];
     }
 }

@@ -27,9 +27,14 @@ class DemoSeeder extends Seeder
         );
 
         $portfolio->resetAccount($user, config('trading.starting_cash_cents'));
-        $user->watchlistItems()->delete();
+        $user->watchlists()->delete();
+        $main = $user->watchlists()->create(['name' => 'Standaard']);
         foreach (['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY'] as $symbol) {
-            $user->watchlistItems()->create(['symbol' => $symbol]);
+            $main->items()->create(['user_id' => $user->id, 'symbol' => $symbol]);
+        }
+        $growth = $user->watchlists()->create(['name' => 'Groei']);
+        foreach (['AMD', 'PLTR', 'SHOP'] as $symbol) {
+            $growth->items()->create(['user_id' => $user->id, 'symbol' => $symbol]);
         }
 
         $originalHours = config('trading.ignore_market_hours');

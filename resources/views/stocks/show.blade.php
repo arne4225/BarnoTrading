@@ -96,6 +96,15 @@
                     </x-card>
                 @endif
 
+                <x-card title="Prijsalert">
+                    <form method="POST" action="{{ route('alerts.store') }}" class="flex gap-2">
+                        @csrf
+                        <input type="hidden" name="symbol" value="{{ $symbol }}">
+                        <x-text-input name="price" inputmode="decimal" placeholder="Meld me bij niveau ($)" class="w-full" required />
+                        <x-primary-button>Alert zetten</x-primary-button>
+                    </form>
+                </x-card>
+
                 <x-card :title="'Open orders voor '.$symbol">
                     <x-orders-table :orders="$openOrders" cancellable />
                 </x-card>

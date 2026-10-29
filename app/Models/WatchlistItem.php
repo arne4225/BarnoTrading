@@ -14,6 +14,11 @@ class WatchlistItem extends Model
     /** @use HasFactory<WatchlistItemFactory> */
     use HasFactory;
 
+    public function watchlist(): BelongsTo
+    {
+        return $this->belongsTo(Watchlist::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

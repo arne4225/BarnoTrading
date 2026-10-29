@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PriceAlertController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StatisticsController;
@@ -37,7 +38,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/watchlist', [WatchlistController::class, 'index'])->name('watchlist.index');
     Route::post('/watchlist', [WatchlistController::class, 'store'])->name('watchlist.store');
+    Route::post('/watchlists', [WatchlistController::class, 'storeList'])->name('watchlists.store');
+    Route::delete('/watchlists/{watchlist}', [WatchlistController::class, 'destroyList'])->name('watchlists.destroy');
     Route::delete('/watchlist/{watchlistItem}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
+
+    Route::post('/alerts', [PriceAlertController::class, 'store'])->name('alerts.store');
+    Route::delete('/alerts/{priceAlert}', [PriceAlertController::class, 'destroy'])->name('alerts.destroy');
+    Route::post('/alerts/{priceAlert}/acknowledge', [PriceAlertController::class, 'acknowledge'])->name('alerts.acknowledge');
 
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::put('/account', [AccountController::class, 'update'])->name('account.update');
