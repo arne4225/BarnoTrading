@@ -42,9 +42,9 @@ class OrderService
 
         $position = $this->portfolio->positionFor($user, $symbol);
         $this->portfolio->assertTradeAllowed($position?->quantity ?? 0, $data->side, $data->isShort, $data->quantity);
-        $this->validateBracket($data, $this->referencePrice($data, $quote));
+        $this->validateBracket($data, $this->referencePrice($data, $quote, $user));
 
-        $this->assertBuyingPower($user, $symbol, $data->side, $data->quantity, $this->referencePrice($data, $quote), $this->commissionCents());
+        $this->assertBuyingPower($user, $symbol, $data->side, $data->quantity, $this->referencePrice($data, $quote, $user), $user->effectiveCommissionCents());
 
         $order = DB::transaction(function () use ($user, $data, $symbol, $quote) {
             $order = $user->orders()->create([
@@ -129,13 +129,14 @@ class OrderService
 
         $price = $quote->priceCents;
         $isBuy = $order->side === OrderSide::Buy;
+        $user = $order->user;
 
         $fillPrice = match ($order->type) {
-            OrderType::Market => $this->withSlippage($price, $isBuy),
+            OrderType::Market => $this->withSlippage($price, $isBuy, $user),
             OrderType::Limit => $this->limitFill($order, $price),
-            OrderType::Stop => $this->stopTriggered($order, $price) ? $this->withSlippage($price, $isBuy) : null,
+            OrderType::Stop => $this->stopTriggered($order, $price) ? $this->withSlippage($price, $isBuy, $user) : null,
             OrderType::StopLimit => $this->evaluateStopLimit($order, $price),
-            OrderType::TrailingStop => $this->evaluateTrailingStop($order, $price),
+            OrderType::TrailingStop => $this->evaluateTrailingStop($order, $price, $user),
         };
 
         if ($fillPrice === null) {
@@ -174,7 +175,7 @@ class OrderService
         return $this->limitFill($order, $price);
     }
 
-    private function evaluateTrailingStop(Order $order, int $price): ?int
+    private function evaluateTrailingStop(Order $order, int $price, User $user): ?int
     {
         $isBuy = $order->side === OrderSide::Buy;
         $extreme = $order->trail_extreme_cents ?? $price;
@@ -189,12 +190,12 @@ class OrderService
 
         $triggered = $isBuy ? $price >= $extreme + $distance : $price <= $extreme - $distance;
 
-        return $triggered ? $this->withSlippage($price, $isBuy) : null;
+        return $triggered ? $this->withSlippage($price, $isBuy, $user) : null;
     }
 
     private function fill(Order $order, int $fillPrice): bool
     {
-        $commission = $this->commissionCents();
+        $commission = $order->user->effectiveCommissionCents();
 
         return DB::transaction(function () use ($order, $fillPrice, $commission) {
             try {
@@ -350,25 +351,20 @@ class OrderService
         }
     }
 
-    private function referencePrice(PlaceOrderData $data, Quote $quote): int
+    private function referencePrice(PlaceOrderData $data, Quote $quote, User $user): int
     {
         return match ($data->type) {
             OrderType::Limit, OrderType::StopLimit => $data->limitPriceCents,
             OrderType::Stop => $data->stopPriceCents,
-            default => $data->side === OrderSide::Buy ? $this->withSlippage($quote->priceCents, true) : $quote->priceCents,
+            default => $data->side === OrderSide::Buy ? $this->withSlippage($quote->priceCents, true, $user) : $quote->priceCents,
         };
     }
 
-    private function withSlippage(int $priceCents, bool $isBuy): int
+    private function withSlippage(int $priceCents, bool $isBuy, User $user): int
     {
-        $bps = config('trading.slippage_bps');
+        $bps = $user->effectiveSlippageBps();
         $adjustment = (int) round($priceCents * $bps / 10000);
 
         return $isBuy ? $priceCents + $adjustment : max(1, $priceCents - $adjustment);
-    }
-
-    private function commissionCents(): int
-    {
-        return config('trading.commission_cents');
     }
 }

@@ -11,7 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'starting_cash_cents', 'cash_cents'])]
+#[Fillable(['name', 'email', 'password', 'starting_cash_cents', 'cash_cents',
+    'commission_cents', 'slippage_bps', 'risk_per_trade_bps', 'max_position_percent',
+    'min_risk_reward_hundredths', 'warn_without_stop_loss', 'daily_loss_limit_bps', 'leaderboard_visible',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,7 +31,22 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'warn_without_stop_loss' => 'boolean',
+            'leaderboard_visible' => 'boolean',
         ];
+    }
+
+    /**
+     * Persoonlijke commissie, anders de standaard uit config.
+     */
+    public function effectiveCommissionCents(): int
+    {
+        return $this->commission_cents ?? config('trading.commission_cents');
+    }
+
+    public function effectiveSlippageBps(): int
+    {
+        return $this->slippage_bps ?? config('trading.slippage_bps');
     }
 
     public function orders(): HasMany

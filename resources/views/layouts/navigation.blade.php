@@ -28,7 +28,7 @@
                         Transacties
                     </x-nav-link>
                     <x-nav-link :href="route('account.edit')" :active="request()->routeIs('account.*')">
-                        Account
+                        Instellingen
                     </x-nav-link>
                 </div>
             </div>
@@ -98,7 +98,7 @@
                 Transacties
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('account.edit')" :active="request()->routeIs('account.*')">
-                Account
+                Instellingen
             </x-responsive-nav-link>
         </div>
 
